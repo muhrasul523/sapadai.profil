@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profil Dai - Wahdah Islamiyah</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; color: #1f2937; }
+        .wahdah-bg { background-color: #0f766e; } 
+        .wahdah-text { color: #0f766e; }
+        
+        .input-error { 
+            border-color: #ef4444 !important; 
+            outline: none; 
+            box-shadow: 0 0 0 1px #ef4444 !important; 
+            background-color: #fef2f2 !important; 
+            transition: all 0.2s ease;
+        }
+        
+        #loading-overlay { display: none; background: rgba(255, 255, 255, 0.95); z-index: 9999; }
+        .spinner { border: 4px solid rgba(15, 118, 110, 0.1); width: 50px; height: 50px; border-radius: 50%; border-left-color: #0f766e; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        input[readonly], select[readonly] { background-color: #f3f4f6; cursor: not-allowed; color: #6b7280; }
+        
+        #cropper-modal { display: none; z-index: 50; }
+        .cropper-container { max-height: 70vh; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .login-tab.active { border-bottom: 2px solid #0f766e; color: #0f766e; font-weight: 600; background-color: #f0fdfa; }
+        .login-tab { border-bottom: 2px solid transparent; color: #6b7280; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 flex flex-col justify-center items-center">
+        <div class="spinner mb-4"></div>
+        <h2 class="text-xl font-semibold wahdah-text" id="loading-text">Memuat Sistem...</h2>
+    </div>
+
+    <!-- Login Page -->
+    <div id="login-page" class="min-h-screen flex items-center justify-center p-4 bg-gray-50">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100">
+            <div class="text-center mb-6">
+                <div class="inline-block p-4 rounded-full bg-teal-50 mb-4 shadow-inner">
+                    <i class="fas fa-mosque text-4xl wahdah-text"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-800 uppercase tracking-wide">PROFIL DAI UTUSAN</h1>
+                <p class="text-sm text-gray-500 font-semibold tracking-wide">WAHDAH ISLAMIYAH</p>
+            </div>
+
+            <div id="login-error-msg" class="bg-red-50 text-red-600 border border-red-200 rounded p-3 text-sm font-medium hidden text-center mb-4"></div>
+            
+            <div class="flex mb-6 border-b rounded-t-lg overflow-hidden">
+                <div class="flex-1 text-center py-3 login-tab active" onclick="switchLoginTab('wa')"><i class="fab fa-whatsapp mr-2"></i>Nomor WA</div>
+                <div class="flex-1 text-center py-3 login-tab" onclick="switchLoginTab('email')"><i class="fas fa-envelope mr-2"></i>Email</div>
+            </div>
+
+            <form id="login-form" class="space-y-6">
+                <input type="hidden" id="login-type" value="wa">
+                
+                <div id="div-login-wa">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nomor WhatsApp</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-phone text-gray-400"></i></div>
+                        <input type="tel" id="login-wa" class="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 wa-validate" placeholder="Contoh: 628123456789">
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">*Hanya angka, otomatis merubah 08 menjadi 628</p>
+                </div>
+
+                <div id="div-login-email" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Alamat Email</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-envelope text-gray-400"></i></div>
+                        <input type="email" id="login-email" class="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500" placeholder="contoh@email.com">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Kata Sandi</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-lock text-gray-400"></i></div>
+                        <input type="password" id="login-password" required class="w-full pl-10 pr-10 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500" placeholder="Masukkan kata sandi">
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer text-gray-400 hover:text-gray-600" onclick="togglePassword()">
+                            <i class="fas fa-eye" id="eye-icon"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end">
+                    <a href="https://s.wahdah.or.id/lupa_kata_sandi" target="_blank" class="text-sm text-teal-600 hover:text-teal-800 font-medium">Lupa Kata Sandi?</a>
+                </div>
+                <button type="submit" class="w-full wahdah-bg text-white font-bold py-3 px-4 rounded-lg hover:bg-teal-800 transition duration-200 flex justify-center items-center shadow-lg">
+                    <i class="fas fa-sign-in-alt mr-2"></i> Masuk Sistem
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Dashboard Page -->
+    <div id="dashboard-page" class="hidden min-h-screen pb-20">
+        <nav class="wahdah-bg text-white p-4 sticky top-0 z-40 shadow-lg">
+            <div class="max-w-6xl mx-auto flex justify-between items-center">
+                <div class="font-bold text-lg flex items-center">
+                    <i class="fas fa-user-edit mr-2"></i> Profil Dai
+                </div>
+                <button type="button" onclick="logout()" class="text-sm border border-white hover:bg-white hover:text-teal-700 font-medium px-4 py-1.5 rounded transition shadow-sm flex items-center"><i class="fas fa-power-off mr-1"></i> Keluar</button>
+            </div>
+        </nav>
+
+        <div class="max-w-6xl mx-auto mt-6 px-4">
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="md:col-span-2 bg-teal-50 border-l-4 border-teal-600 p-4 rounded shadow-sm flex flex-col justify-center">
+                    <div class="flex items-start">
+                        <i class="fas fa-info-circle text-teal-600 mt-1 mr-3 text-lg"></i>
+                        <p class="text-sm text-teal-800">Marhaban, <strong id="welcome-name">Dai</strong>. Data riwayat terakhir Anda telah dimuat otomatis. Silakan periksa seluruh formulir dan perbarui jika terdapat perubahan data.</p>
+                    </div>
+                </div>
+
+                <div id="last-update-card" class="hidden md:col-span-1 bg-white border border-gray-200 p-4 rounded shadow-sm flex flex-col items-center justify-center text-center">
+                    <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Terakhir diperbaharui:</p>
+                    <p class="text-sm font-bold text-teal-700" id="last-update-text"></p>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-2 mb-6 w-full bg-white p-2 rounded-lg shadow-sm border border-gray-100">
+                <button class="tab-btn bg-teal-600 text-white px-4 py-2.5 rounded-md text-sm font-semibold flex-1 text-center whitespace-nowrap shadow-sm transition" data-target="tab-info"><i class="fas fa-id-card mr-1"></i> Utama</button>
+                <button class="tab-btn bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-2.5 rounded-md text-sm font-semibold flex-1 text-center whitespace-nowrap transition" data-target="tab-alamat"><i class="fas fa-map-marked-alt mr-1"></i> Alamat</button>
+                <button class="tab-btn bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-2.5 rounded-md text-sm font-semibold flex-1 text-center whitespace-nowrap transition" data-target="tab-keluarga"><i class="fas fa-users mr-1"></i> Keluarga</button>
+                <button class="tab-btn bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-2.5 rounded-md text-sm font-semibold flex-1 text-center whitespace-nowrap transition" data-target="tab-lainnya"><i class="fas fa-sitemap mr-1"></i> Lainnya</button>
+            </div>
+
+            <form id="profil-form" class="bg-white p-6 md:p-8 rounded-xl shadow-lg border border-gray-100" novalidate>
+                <input type="hidden" id="dai_id" name="dai_id">
+                
+                <!-- Tab Info Utama -->
+                <div id="tab-info" class="tab-content active space-y-6">
+                    <h3 class="text-xl font-bold border-b pb-2 text-gray-800"><i class="fas fa-id-card text-teal-600 mr-2"></i>Informasi Utama & Pendidikan</h3>
+                    
+                    <div class="grid grid-cols-1 gap-4">
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Email <span class="text-red-500">*</span></label><input type="email" id="email" name="email" required class="w-full p-2.5 border rounded-lg focus:ring-1 focus:ring-teal-500 bg-white" placeholder="contoh@email.com"></div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Gelar Depan</label>
+                            <input type="text" id="gelar_depan" name="gelar_depan" class="w-full p-2.5 border rounded-lg focus:ring-1 focus:ring-teal-500" placeholder="Cth: Dr. / K.M. / H.">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nama Tanpa Gelar <span class="text-red-500">*</span></label>
+                            <input type="text" id="nama_lengkap_tanpa_gelar" name="nama_lengkap_tanpa_gelar" required class="w-full p-2.5 border rounded-lg auto-caps focus:ring-1 focus:ring-teal-500" placeholder="Ketik nama...">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Gelar Belakang</label>
+                            <input type="text" id="gelar_belakang" name="gelar_belakang" class="w-full p-2.5 border rounded-lg focus:ring-1 focus:ring-teal-500" placeholder="Cth: S.Pd., M.Pd.">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nama Sesuai KTP <span class="text-red-500">*</span></label>
+                            <input type="text" id="nama_sesuai_ktp" name="nama_sesuai_ktp" required class="w-full p-2.5 border rounded-lg auto-caps focus:ring-1 focus:ring-teal-500" placeholder="Ketik persis sesuai KTP">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Preview Nama Beserta Gelar</label>
+                            <input type="text" id="nama_lengkap_beserta_gelar" name="nama_lengkap_beserta_gelar" readonly class="w-full p-2.5 border border-teal-200 rounded-lg font-semibold bg-teal-50 text-teal-800">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">NIK (16 Digit) <span class="text-red-500">*</span></label>
+                        <input type="number" id="nik" name="nik" required class="w-full p-2.5 border rounded-lg nik-validate focus:ring-1 focus:ring-teal-500" placeholder="Masukkan 16 Digit NIK">
+                        <p class="text-xs text-red-500 hidden mt-1" id="nik-error">Format salah: NIK harus tepat 16 digit angka.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 p-5 border rounded-xl bg-gray-50/50 shadow-inner">
+                        <div class="text-center flex flex-col items-center">
+                            <label class="block text-sm font-bold text-gray-700 mb-3">Foto KTP (Landscape 5:8) <span class="text-red-500">*</span></label>
+                            <img id="preview_ktp" src="https://placehold.co/400x250/e2e8f0/64748b?text=Preview+KTP" class="h-32 object-cover rounded-lg border-2 border-dashed border-gray-300 mb-3 bg-white shadow-sm p-1" referrerpolicy="no-referrer">
+                            
+                            <input type="hidden" id="foto_ktp_url" name="foto_ktp_url">
+                            <input type="hidden" id="base64_ktp" name="base64_ktp">
+                            <input type="hidden" id="file_name_ktp" name="file_name_ktp">
+                            
+                            <button type="button" onclick="triggerFile('file_ktp')" class="text-sm bg-white border border-teal-600 text-teal-700 font-medium px-4 py-1.5 rounded-lg hover:bg-teal-50 transition shadow-sm w-full max-w-[200px]"><i class="fas fa-camera mr-1"></i> Unggah / Perbarui</button>
+                            <input type="file" id="file_ktp" accept="image/jpeg, image/png" class="hidden" onchange="handleFileSelect(event, 'ktp')">
+                        </div>
+                        <div class="text-center flex flex-col items-center">
+                            <label class="block text-sm font-bold text-gray-700 mb-3">Foto Wajah Formal <span class="text-red-500">*</span></label>
+                            <img id="preview_wajah" src="https://placehold.co/300x400/e2e8f0/64748b?text=Foto+Wajah+Formal" class="h-32 w-24 object-cover rounded-lg border-2 border-dashed border-gray-300 mb-3 bg-white shadow-sm p-1" referrerpolicy="no-referrer">
+                            
+                            <input type="hidden" id="foto_wajah_url" name="foto_wajah_url">
+                            <input type="hidden" id="base64_wajah" name="base64_wajah">
+                            <input type="hidden" id="file_name_wajah" name="file_name_wajah">
+                            
+                            <button type="button" onclick="triggerFile('file_wajah')" class="text-sm bg-white border border-teal-600 text-teal-700 font-medium px-4 py-1.5 rounded-lg hover:bg-teal-50 transition shadow-sm w-full max-w-[200px]"><i class="fas fa-camera mr-1"></i> Unggah / Perbarui</button>
+                            <input type="file" id="file_wajah" accept="image/jpeg, image/png" class="hidden" onchange="handleFileSelect(event, 'wajah')">
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 border-t pt-5">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Status Alumni <span class="text-red-500">*</span></label>
+                            <select id="alumni" name="alumni" required class="w-full p-2.5 border rounded-lg focus:ring-1 focus:ring-teal-500 bg-white">
+                                <option value="">-- Pilih --</option>
+                                <option value="IAI STIBA Makassar">IAI STIBA Makassar</option>
+                                <option value="Sekolah Dai Pusat">Sekolah Dai Pusat</option>
+                                <option value="Sekolah Dai Wilayah">Sekolah Dai Wilayah</option>
+                                <option value="Alumnus Luar Negeri">Alumnus Luar Negeri</option>
+                                <option value="Kampus">Kampus Umum</option>
+                                <option value="Halakah Tarbiyah">Halakah Tarbiyah</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Tahun Diutus <span class="text-red-500">*</span></label>
+                            <select id="tahun_diutus" name="tahun_diutus" required class="w-full p-2.5 border rounded-lg bg-white focus:ring-1 focus:ring-teal-500"><option value="">-- Pilih --</option></select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Pendidikan Terakhir <span class="text-red-500">*</span></label>
+                            <select id="pendidikan_terakhir" name="pendidikan_terakhir" required class="w-full p-2.5 border rounded-lg bg-white focus:ring-1 focus:ring-teal-500">
+                                <option value="">-- Pilih --</option>
+                                <option value="TK">TK</option><option value="SD">SD</option><option value="SMP">SMP</option><option value="SMA">SMA</option>
+                                <option value="D1">D1</option><option value="D2">D2</option><option value="D3">D3</option><option value="D4">D4</option>
+                                <option value="S1">S1</option><option value="S2">S2</option><option value="S3">S3</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Alamat -->
+                <div id="tab-alamat" class="tab-content space-y-6">
+                    <h3 class="text-xl font-bold border-b pb-2 text-gray-800"><i class="fas fa-map-marker-alt text-teal-600 mr-2"></i>Tempat Lahir & Alamat</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Tempat Lahir <span class="text-red-500">*</span></label><input type="text" id="tempat_lahir" name="tempat_lahir" required class="w-full p-2.5 border rounded-lg auto-caps focus:ring-1 focus:ring-teal-500"></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Tanggal Lahir <span class="text-red-500">*</span></label><input type="date" id="tanggal_lahir" name="tanggal_lahir" required class="w-full p-2.5 border rounded-lg focus:ring-1 focus:ring-teal-500"></div>
+                    </div>
+
+                    <div class="mt-6 bg-gray-50/70 p-5 border rounded-xl shadow-sm">
+                        <h4 class="font-bold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-home mr-2 text-teal-600"></i>Domisili / Tempat Tugas Saat Ini</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <input type="hidden" id="domisili_prov" name="domisili_prov">
+                            <input type="hidden" id="domisili_kabkota" name="domisili_kabkota">
+                            <input type="hidden" id="domisili_kec" name="domisili_kec">
+                            <input type="hidden" id="domisili_desakel" name="domisili_desakel">
+                            
+                            <div><label class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Provinsi *</label><select id="domisili_prov_id" name="domisili_prov_id" required class="w-full p-2 border rounded-lg mt-1 text-sm bg-white" onchange="handleWilayahChange('domisili', 'prov')"><option value="">Sedang Memuat...</option></select></div>
+                            <div><label class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Kab/Kota *</label><select id="domisili_kabkota_id" name="domisili_kabkota_id" required class="w-full p-2 border rounded-lg mt-1 text-sm bg-white" onchange="handleWilayahChange('domisili', 'kabkota')"><option value="">Pilih Prov Dulu</option></select></div>
+                            <div><label class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Kecamatan *</label><select id="domisili_kec_id" name="domisili_kec_id" required class="w-full p-2 border rounded-lg mt-1 text-sm bg-white" onchange="handleWilayahChange('domisili', 'kec')"><option value="">Pilih Kab Dulu</option></select></div>
+                            <div><label class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Desa/Kel *</label><select id="domisili_desakel_id" name="domisili_desakel_id" required class="w-full p-2 border rounded-lg mt-1 text-sm bg-white" onchange="handleWilayahChange('domisili', 'desakel')"><option value="">Pilih Kec Dulu</option></select></div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 bg-gray-50/70 p-5 border rounded-xl shadow-sm">
+                        <div class="flex justify-between items-center mb-4 border-b pb-2">
+                            <h4 class="font-bold text-gray-800"><i class="fas fa-road mr-2 text-teal-600"></i>Alamat Asal</h4>
+                            <label class="flex items-center text-xs font-medium cursor-pointer text-teal-800 bg-teal-100 hover:bg-teal-200 transition px-3 py-1.5 rounded-full border border-teal-200">
+                                <input type="checkbox" id="copy-alamat" class="mr-2 rounded text-teal-600 focus:ring-teal-500">Sama dengan Domisili
+                            </label>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <input type="hidden" id="asal_prov" name="asal_prov">
+                            <input type="hidden" id="asal_kabkota" name="asal_kabkota">
+                            <input type="hidden" id="asal_kec" name="asal_kec">
+                            <input type="hidden" id="asal_desakel" name="asal_desakel">
+
+                            <div><label class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Provinsi *</label><select id="asal_prov_id" name="asal_prov_id" required class="w-full p-2 border rounded-lg mt-1 text-sm bg-white" onchange="handleWilayahChange('asal', 'prov')"><option value="">Sedang Memuat...</option></select></div>
+                            <div><label class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Kab/Kota *</label><select id="asal_kabkota_id" name="asal_kabkota_id" required class="w-full p-2 border rounded-lg mt-1 text-sm bg-white" onchange="handleWilayahChange('asal', 'kabkota')"><option value="">Pilih Prov Dulu</option></select></div>
+                            <div><label class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Kecamatan *</label><select id="asal_kec_id" name="asal_kec_id" required class="w-full p-2 border rounded-lg mt-1 text-sm bg-white" onchange="handleWilayahChange('asal', 'kec')"><option value="">Pilih Kab Dulu</option></select></div>
+                            <div><label class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Desa/Kel *</label><select id="asal_desakel_id" name="asal_desakel_id" required class="w-full p-2 border rounded-lg mt-1 text-sm bg-white" onchange="handleWilayahChange('asal', 'desakel')"><option value="">Pilih Kec Dulu</option></select></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Keluarga -->
+                <div id="tab-keluarga" class="tab-content space-y-6">
+                    <h3 class="text-xl font-bold border-b pb-2 text-gray-800"><i class="fas fa-users text-teal-600 mr-2"></i>Data Keluarga & Asuransi</h3>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Status / Jenis BPJS <span class="text-red-500">*</span></label>
+                        <select id="jenis_bpjs" name="jenis_bpjs" required class="w-full p-2.5 border rounded-lg md:w-1/2 bg-white focus:ring-1 focus:ring-teal-500">
+                            <option value="">-- Pilih --</option>
+                            <option value="PBI (Penerima Bantuan Iuran)">PBI (Penerima Bantuan Iuran)</option>
+                            <option value="PPU (Pekerja Penerima Upah)">PPU (Pekerja Penerima Upah)</option>
+                            <option value="PBPU (Pekerja Bukan Penerima Upah)">PBPU (Pekerja Bukan Penerima Upah)</option>
+                            <option value="BP (Bukan Pekerja)">BP (Bukan Pekerja)</option>
+                            <option value="Belum punya">Belum punya</option>
+                            <option value="Punya tapi tidak aktif">Punya tapi tidak aktif</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Nama Ayah Kandung <span class="text-red-500">*</span></label><input type="text" id="nama_ayah_kandung" name="nama_ayah_kandung" required class="w-full p-2.5 border rounded-lg auto-caps focus:ring-1 focus:ring-teal-500"></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Nama Ibu Kandung <span class="text-red-500">*</span></label><input type="text" id="nama_ibu_kandung" name="nama_ibu_kandung" required class="w-full p-2.5 border rounded-lg auto-caps focus:ring-1 focus:ring-teal-500"></div>
+                    </div>
+
+                    <div class="border-t pt-5 mt-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Status Pernikahan <span class="text-red-500">*</span></label>
+                        <select id="status_pernikahan" name="status_pernikahan" required class="w-full p-2.5 border rounded-lg md:w-1/3 bg-white focus:ring-1 focus:ring-teal-500 font-semibold text-gray-700">
+                            <option value="">-- Pilih Status --</option>
+                            <option value="BELUM MENIKAH">BELUM MENIKAH</option>
+                            <option value="MENIKAH">MENIKAH</option>
+                            <option value="CERAI HIDUP">CERAI HIDUP</option>
+                            <option value="CERAI MATI">CERAI MATI</option>
+                        </select>
+                    </div>
+
+                    <div id="istri-container" class="hidden mt-4 space-y-4"></div>
+                    <button type="button" id="btn-tambah-istri" class="hidden mt-4 text-sm bg-teal-50 text-teal-700 px-4 py-2 rounded-lg font-semibold hover:bg-teal-100 border border-teal-200 transition shadow-sm"><i class="fas fa-plus mr-1"></i> Tambah Data Istri (Maks 4)</button>
+
+                    <div class="grid grid-cols-2 gap-4 mt-6 pt-5 border-t">
+                        <div class="bg-gray-50 p-3 rounded-lg border text-center">
+                            <label class="block text-xs font-semibold text-gray-500 uppercase">Total Istri</label>
+                            <input type="number" id="jumlah_istri" name="jumlah_istri" value="0" readonly class="w-full p-1 bg-transparent font-bold text-2xl text-center text-teal-800 outline-none">
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-lg border text-center">
+                            <label class="block text-xs font-semibold text-gray-500 uppercase">Total Anak</label>
+                            <input type="number" id="jumlah_anak" name="jumlah_anak" value="0" readonly class="w-full p-1 bg-transparent font-bold text-2xl text-center text-teal-800 outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Lainnya -->
+                <div id="tab-lainnya" class="tab-content space-y-6">
+                    <h3 class="text-xl font-bold border-b pb-2 text-gray-800"><i class="fas fa-sitemap text-teal-600 mr-2"></i>Data Tarbiyah & Pimpinan</h3>
+                    
+                    <div class="bg-gray-50/70 p-5 rounded-xl border shadow-sm">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Marhalah <span class="text-red-500">*</span></label>
+                                <select id="marhalah" name="marhalah" required class="w-full p-2.5 border rounded-lg bg-white">
+                                    <option value="">-- Pilih --</option>
+                                    <option value="Tarif 1">Tarif 1</option><option value="Tarif 2">Tarif 2</option>
+                                    <option value="Takwin 1">Takwin 1</option><option value="Takwin 2">Takwin 2</option>
+                                    <option value="Tanfiz 1">Tanfiz 1</option><option value="Tanfiz 2">Tanfiz 2</option>
+                                </select>
+                            </div>
+                            <div><label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Nama Murabbi <span class="text-red-500">*</span></label><input type="text" id="nama_murabbi" name="nama_murabbi" required class="w-full p-2.5 border rounded-lg auto-caps"></div>
+                            <div><label class="block text-xs font-semibold text-gray-600 uppercase mb-1">WA Murabbi <span class="text-red-500">*</span></label><input type="tel" id="wa_murabbi" name="wa_murabbi" required class="w-full p-2.5 border rounded-lg wa-validate"></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50/70 p-5 rounded-xl border mt-5 shadow-sm">
+                        <h4 class="font-bold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-user-tie mr-2 text-teal-600"></i>Pimpinan Tempat Tugas</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                            <div><label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Nama Ketua <span class="text-red-500">*</span></label><input type="text" id="nama_pimpinan" name="nama_pimpinan" required class="w-full p-2.5 border rounded-lg auto-caps"></div>
+                            <div><label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Jabatan Ketua <span class="text-red-500">*</span></label><input type="text" id="jabatan_pimpinan" name="jabatan_pimpinan" required class="w-full p-2.5 border rounded-lg auto-caps" placeholder="Cth: KETUA DPD"></div>
+                            <div><label class="block text-xs font-semibold text-gray-600 uppercase mb-1">WA Ketua <span class="text-red-500">*</span></label><input type="tel" id="wa_pimpinan" name="wa_pimpinan" required class="w-full p-2.5 border rounded-lg wa-validate"></div>
+                        </div>
+                    </div>
+
+                    <h3 class="text-xl font-bold border-b pb-2 mt-8 text-gray-800"><i class="fas fa-wallet text-teal-600 mr-2"></i>Data Rekening</h3>
+                    <div class="bg-teal-50/50 p-5 rounded-xl border border-teal-200 shadow-sm">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                            <div>
+                                <label class="block text-xs font-semibold text-teal-800 uppercase mb-1">Rekening Berkah Mobile</label>
+                                <input type="text" id="rekening_berkah_mobile" name="rekening_berkah_mobile" readonly class="w-full p-2.5 border border-teal-100 rounded-lg bg-teal-100/50 text-teal-900 font-medium" placeholder="Kosong (Sistem)">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Nama Bank <span class="text-red-500">*</span></label>
+                                <select id="nama_bank" name="nama_bank" required class="w-full p-2.5 border rounded-lg bg-white" onchange="toggleBankLainnya()">
+                                    <option value="">-- Pilih --</option>
+                                    <option value="BSI">BSI</option>
+                                    <option value="BNI">BNI</option>
+                                    <option value="BRI">BRI</option>
+                                    <option value="BSN">BSN</option>
+                                    <option value="BTN">BTN</option>
+                                    <option value="BCA">BCA</option>
+                                    <option value="MANDIRI">MANDIRI</option>
+                                    <option value="MUAMALAT">MUAMALAT</option>
+                                    <option value="LAINNYA (input manual)">LAINNYA (input manual)</option>
+                                </select>
+                                <input type="text" id="nama_bank_lainnya" name="nama_bank_lainnya" class="w-full p-2.5 border rounded-lg auto-caps mt-2 hidden bg-white" placeholder="Sebutkan nama bank...">
+                            </div>
+                            <div><label class="block text-xs font-semibold text-gray-600 uppercase mb-1">No. Rekening <span class="text-red-500">*</span></label><input type="number" id="nomor_rekening" name="nomor_rekening" required class="w-full p-2.5 border rounded-lg bg-white"></div>
+                            <div><label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Nama Pemilik <span class="text-red-500">*</span></label><input type="text" id="nama_pemilik" name="nama_pemilik" required class="w-full p-2.5 border rounded-lg auto-caps bg-white" placeholder="Sesuai buku tabungan"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 pt-6 border-t flex flex-col md:flex-row justify-between items-center gap-4">
+                    <p class="text-xs text-gray-500 w-full md:w-auto text-center md:text-left"><i class="fas fa-info-circle"></i> Pastikan tidak ada kolom yang bergaris merah.</p>
+                    <button type="button" onclick="validateAndSubmit()" class="wahdah-bg text-white font-bold py-3.5 px-10 rounded-xl shadow-lg hover:bg-teal-800 hover:shadow-xl transition flex items-center justify-center w-full md:w-auto text-lg">
+                        <i class="fas fa-save mr-2"></i> Simpan Pembaruan Profil
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Cropper Modal -->
+    <div id="cropper-modal" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col border border-gray-200">
+            <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+                <h3 class="font-bold text-lg text-gray-800" id="cropper-title"><i class="fas fa-crop-alt text-teal-600 mr-2"></i>Sesuaikan Foto</h3>
+                <button type="button" onclick="closeCropper()" class="text-gray-400 hover:text-red-500 transition p-1"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="p-4 bg-gray-100 flex-grow flex items-center justify-center cropper-container" style="background-image: radial-gradient(#d1d5db 1px, transparent 1px); background-size: 20px 20px;">
+                <img id="cropper-image" src="" alt="Crop" class="max-w-full h-auto shadow-md">
+            </div>
+            <div class="p-4 border-t flex justify-end gap-3 bg-white">
+                <button type="button" onclick="closeCropper()" class="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition">Batal</button>
+                <button type="button" onclick="applyCrop()" class="px-5 py-2.5 wahdah-bg text-white rounded-lg font-bold hover:bg-teal-800 transition shadow"><i class="fas fa-check mr-2"></i>Gunakan Potongan</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================= PERUBAHAN HANYA DI BLOK INI =================
+        // MASUKKAN URL DEPLOY WEB APP ANDA DI SINI
+        var SCRIPT_URL = 'https://script.google.com/macros/s/GANTI_DENGAN_URL_WEB_APP_ANDA/exec'; 
+        
+        var isSimulation = false; 
+
+        // BRIDGE POLYFILL (Mengubah google.script.run menjadi fetch API secara otomatis)
+        if (typeof google === 'undefined' || !google.script) {
+            window.google = {
+                script: {
+                    run: {
+                        withSuccessHandler: function(onSuccess) {
+                            var createRunners = function(onFail) {
+                                var callBackend = function(action, args) {
+                                    fetch(SCRIPT_URL, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                                        body: JSON.stringify({ action: action, args: args })
+                                    })
+                                    .then(function(res) { return res.json(); })
+                                    .then(function(data) { if (onSuccess) onSuccess(data); })
+                                    .catch(function(err) { if (onFail) onFail(err); else console.error(err); });
+                                };
+                                return {
+                                    processLogin: function(type, user, pass) { callBackend('processLogin', [type, user, pass]); },
+                                    getWilayahData: function() { callBackend('getWilayahData', []); },
+                                    saveProfile: function(data) { callBackend('saveProfile', [data]); }
+                                };
+                            };
+                            var obj = createRunners(null);
+                            obj.withFailureHandler = function(onFail) { return createRunners(onFail); };
+                            return obj;
+                        }
+                    }
+                }
+            };
+        }
+        // ================= AKHIR PERUBAHAN ==============================
+
+        var currentUser = null;
+        var cropper = null;
+        var currentCropTarget = '';
+        var istriCount = 0;
+        var wilayahCache = { prov: [], kabkota: [], kec: [], desakel: [] };
+        var wilayahReady = false;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initTahunDropdown();
+            setupTabs();
+            setupAutoCaps();
+            setupValidationListeners();
+            setupDynamicName();
+            setupCopyAlamat();
+            fetchWilayahData();
+        });
+
+        function showLoading(text) {
+            document.getElementById('loading-text').innerText = text || 'Mencocokkan data...';
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+        function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
+        
+        function addError(element) { if(element) element.classList.add('input-error'); }
+        function removeError(element) { if(element) element.classList.remove('input-error'); }
+
+        function switchLoginTab(type) {
+            document.getElementById('login-type').value = type;
+            var tabs = document.querySelectorAll('.login-tab');
+            tabs.forEach(function(t) { t.classList.remove('active', 'border-teal-600', 'text-teal-700', 'bg-teal-50'); });
+            
+            if(type === 'wa') {
+                tabs[0].classList.add('active', 'bg-teal-50');
+                document.getElementById('div-login-wa').classList.remove('hidden');
+                document.getElementById('div-login-email').classList.add('hidden');
+                document.getElementById('login-wa').setAttribute('required', 'true');
+                document.getElementById('login-email').removeAttribute('required');
+            } else {
+                tabs[1].classList.add('active', 'bg-teal-50');
+                document.getElementById('div-login-wa').classList.add('hidden');
+                document.getElementById('div-login-email').classList.remove('hidden');
+                document.getElementById('login-email').setAttribute('required', 'true');
+                document.getElementById('login-wa').removeAttribute('required');
+            }
+            document.getElementById('login-error-msg').classList.add('hidden');
+        }
+
+        function togglePassword() {
+            var pwd = document.getElementById('login-password');
+            var icon = document.getElementById('eye-icon');
+            if (pwd.type === 'password') { pwd.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash'); } 
+            else { pwd.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
+        }
+
+        document.getElementById('login-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var type = document.getElementById('login-type').value;
+            var user = type === 'wa' ? document.getElementById('login-wa').value : document.getElementById('login-email').value;
+            var pass = document.getElementById('login-password').value;
+            
+            if(type === 'wa' && (user.length < 9 || user.length > 15)) { showLoginError("Nomor WA harus valid (9-15 angka)."); return; }
+            
+            showLoading('Mencocokkan data...');
+            document.getElementById('login-error-msg').classList.add('hidden');
+
+            if (isSimulation) {
+                setTimeout(function() {
+                    loginSuccess({ dai_id: "DAI-001", wa: user, email: "simulasi@mail.com", nama_awal: "Bapak Simulasi", 
+                                   nama_sesuai_ktp: "SIMULASI BIN FULAN", tempat_lahir: "JAKARTA", status_pernikahan: "BELUM MENIKAH",
+                                   timestamp: "8/9/2026 07:52:54" });
+                }, 1200);
+            } else {
+                try {
+                    google.script.run
+                        .withSuccessHandler(function(res) {
+                            if(res && res.success) {
+                                loginSuccess(res.data);
+                            } else { 
+                                hideLoading(); 
+                                showLoginError(res ? res.message : "Sistem gagal memuat data. Silakan coba lagi."); 
+                            }
+                        })
+                        .withFailureHandler(function(err) { 
+                            hideLoading(); 
+                            showLoginError("Gagal memuat data, periksa koneksi internet Anda."); 
+                        })
+                        .processLogin(type, user, pass);
+                } catch(e) {
+                    hideLoading(); showLoginError("Kesalahan sistem browser.");
+                }
+            }
+        });
+
+        function showLoginError(msg) {
+            var el = document.getElementById('login-error-msg');
+            el.innerText = msg; el.classList.remove('hidden');
+        }
+
+        function formatDateForInput(dateObjOrString) {
+            if(!dateObjOrString) return '';
+            var d = new Date(dateObjOrString);
+            if(isNaN(d.getTime())) return '';
+            var m = '' + (d.getMonth() + 1);
+            var day = '' + d.getDate();
+            return [d.getFullYear(), m.padStart(2, '0'), day.padStart(2, '0')].join('-');
+        }
+
+        function getDirectDriveLink(url) {
+            if (!url) return '';
+            var fileId = '';
+            var matchId = url.match(/id=([a-zA-Z0-9_-]+)/);
+            if (matchId && matchId[1]) {
+                fileId = matchId[1];
+            } else {
+                var matchPath = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                if (matchPath && matchPath[1]) fileId = matchPath[1];
+            }
+
+            if (fileId) {
+                return 'https://lh3.googleusercontent.com/d/' + fileId;
+            }
+            return url;
+        }
+
+        function loginSuccess(data) {
+            currentUser = data; 
+            document.getElementById('login-page').style.display = 'none';
+            document.getElementById('dashboard-page').style.display = 'block';
+            
+            document.getElementById('welcome-name').innerText = data.nama_awal || 'Dai';
+            document.getElementById('dai_id').value = data.dai_id;
+
+            if (data.timestamp && String(data.timestamp).trim() !== "") {
+                var tsStr = String(data.timestamp).trim();
+                var ts = new Date(tsStr);
+
+                if (tsStr.match(/^\d{1,2}\/\d{1,2}\/\d{4}/)) {
+                    var parts = tsStr.split(/[\s\/:]+/);
+                    if (parts.length >= 3) {
+                        var d = parseInt(parts[0], 10);
+                        var m = parseInt(parts[1], 10) - 1;
+                        var y = parseInt(parts[2], 10);
+                        var h = parts[3] ? parseInt(parts[3], 10) : 0;
+                        var min = parts[4] ? parseInt(parts[4], 10) : 0;
+                        ts = new Date(y, m, d, h, min);
+                    }
+                } else if (isNaN(ts.getTime())) {
+                    ts = new Date(tsStr.replace(/-/g, '/'));
+                }
+                
+                if (!isNaN(ts.getTime())) {
+                    var hari = ['Ahad', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][ts.getDay()];
+                    var bulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'][ts.getMonth()];
+                    var jam = String(ts.getHours()).padStart(2, '0');
+                    var menit = String(ts.getMinutes()).padStart(2, '0');
+                    var formatted = hari + ', ' + ts.getDate() + ' ' + bulan + ' ' + ts.getFullYear() + ' pukul ' + jam + '.' + menit + ' WITA';
+                    document.getElementById('last-update-text').innerText = formatted;
+                } else {
+                    document.getElementById('last-update-text').innerText = tsStr;
+                }
+                document.getElementById('last-update-card').classList.remove('hidden');
+            }
+
+            try { populateFormData(data); } catch (e) { console.error(e); }
+            hideLoading();
+        }
+
+        function populateFormData(data) {
+            var textFields = [
+                'gelar_depan', 'nama_lengkap_tanpa_gelar', 'gelar_belakang', 'nama_sesuai_ktp', 'tempat_lahir',
+                'nama_ayah_kandung', 'nama_ibu_kandung', 'nama_murabbi', 'wa_murabbi', 'nama_pimpinan',
+                'jabatan_pimpinan', 'wa_pimpinan', 'nama_bank_lainnya', 'nomor_rekening', 'nama_pemilik', 'rekening_berkah_mobile'
+            ];
+            textFields.forEach(function(id) {
+                if(data[id]) {
+                    var el = document.getElementById(id);
+                    if(el) el.value = String(data[id]).replace(/^'/, ''); 
+                }
+            });
+            
+            if(data.nik) document.getElementById('nik').value = String(data.nik).replace(/^'/, '');
+            if(data.tanggal_lahir) document.getElementById('tanggal_lahir').value = formatDateForInput(data.tanggal_lahir);
+            if(data.email) document.getElementById('email').value = data.email;
+            
+            var dpn = (data.gelar_depan || '').trim();
+            var nm = (data.nama_lengkap_tanpa_gelar || '').trim();
+            var blk = (data.gelar_belakang || '').trim();
+            var fullName = '';
+            if(dpn) fullName += dpn + ' ';
+            fullName += nm;
+            if(blk) fullName += ', ' + blk;
+            document.getElementById('nama_lengkap_beserta_gelar').value = fullName.trim();
+            
+            var selects = ['alumni', 'tahun_diutus', 'pendidikan_terakhir', 'jenis_bpjs', 'marhalah', 'nama_bank'];
+            selects.forEach(function(id) {
+                if(data[id]) {
+                    var el = document.getElementById(id);
+                    if(el) el.value = data[id];
+                }
+            });
+            toggleBankLainnya();
+
+            if(data.status_pernikahan) {
+                var sp = document.getElementById('status_pernikahan');
+                sp.value = data.status_pernikahan;
+                var container = document.getElementById('istri-container');
+                var btn = document.getElementById('btn-tambah-istri');
+                container.innerHTML = ''; istriCount = 0;
+
+                if(data.status_pernikahan === 'MENIKAH') {
+                    container.classList.remove('hidden'); btn.classList.remove('hidden');
+                    var jmlIstri = parseInt(data.jumlah_istri) || 1;
+                    if(jmlIstri > 4) jmlIstri = 4;
+                    for(var i=1; i<=jmlIstri; i++) {
+                        addIstriForm(i !== 1);
+                        if(data['istri_' + i + '_nama']) document.querySelector('input[name="istri_' + i + '_nama"]').value = data['istri_' + i + '_nama'];
+                        if(data['istri_' + i + '_wa']) document.querySelector('input[name="istri_' + i + '_wa"]').value = data['istri_' + i + '_wa'];
+                        if(data['istri_' + i + '_nik']) document.querySelector('input[name="istri_' + i + '_nik"]').value = String(data['istri_' + i + '_nik']).replace(/^'/, '');
+                        if(data['istri_' + i + '_tgl_lahir']) document.querySelector('input[name="istri_' + i + '_tgl_lahir"]').value = formatDateForInput(data['istri_' + i + '_tgl_lahir']);
+                        if(data['istri_' + i + '_anak']) document.querySelector('input[name="istri_' + i + '_anak"]').value = data['istri_' + i + '_anak'];
+                    }
+                    calcTotalAnak();
+                } else {
+                    container.classList.add('hidden'); btn.classList.add('hidden'); 
+                    document.getElementById('jumlah_istri').value = 0;
+                    calcTotalAnak();
+                }
+            }
+
+            if(data.foto_ktp_url && data.foto_ktp_url !== 'uploaded') { 
+                var finalKtp = getDirectDriveLink(data.foto_ktp_url);
+                document.getElementById('preview_ktp').src = finalKtp; 
+                document.getElementById('foto_ktp_url').value = finalKtp; 
+            }
+            if(data.foto_wajah_url && data.foto_wajah_url !== 'uploaded') { 
+                var finalWajah = getDirectDriveLink(data.foto_wajah_url);
+                document.getElementById('preview_wajah').src = finalWajah; 
+                document.getElementById('foto_wajah_url').value = finalWajah; 
+            }
+            if(data.base64_ktp) { document.getElementById('preview_ktp').src = data.base64_ktp; document.getElementById('base64_ktp').value = data.base64_ktp; }
+            if(data.base64_wajah) { document.getElementById('preview_wajah').src = data.base64_wajah; document.getElementById('base64_wajah').value = data.base64_wajah; }
+
+            if (wilayahReady) {
+                triggerAutoSetWilayah();
+            }
+        }
+
+        function fetchWilayahData() {
+            if (isSimulation) {
+                wilayahCache = {
+                    prov: [{id: "11", value: "ACEH"}, {id: "73", value: "SULAWESI SELATAN"}],
+                    kabkota: [{id: "11.01", value: "KAB. ACEH SELATAN"}, {id: "73.71", value: "KOTA MAKASSAR"}],
+                    kec: [{id: "11.01.01", value: "KEC. BAKONGAN"}, {id: "73.71.01", value: "KEC. MANGGALA"}],
+                    desakel: [{id: "11.01.01.2002", value: "KEUDE BAKONGAN"}, {id: "73.71.01.1001", value: "TAMANGAPA"}]
+                };
+                wilayahReady = true;
+            } else {
+                try {
+                    google.script.run
+                        .withSuccessHandler(function(res) { 
+                            if(res && res.success) wilayahCache = res.data; 
+                            wilayahReady = true;
+                            if(currentUser) triggerAutoSetWilayah();
+                        })
+                        .getWilayahData();
+                } catch(e) { console.error("Error loading wilayah"); }
+            }
+        }
+
+        function triggerAutoSetWilayah() {
+            populateWilayahDropdown('domisili', 'prov', '');
+            populateWilayahDropdown('asal', 'prov', '');
+            autoSetCascading('domisili', currentUser);
+            autoSetCascading('asal', currentUser);
+        }
+
+        function isDirectChild(parentId, childId) {
+            var p = String(parentId).replace(/\./g, '');
+            var c = String(childId).replace(/\./g, '');
+            return c.startsWith(p) && (c.length === p.length + 2 || (p.length === 6 && c.length === 10));
+        }
+
+        function populateWilayahDropdown(prefix, type, parentId) {
+            var select = document.getElementById(prefix + '_' + type + '_id');
+            if(!select) return;
+            select.innerHTML = '<option value="">-- Pilih --</option>';
+            var list = wilayahCache[type] || [];
+            if(parentId) list = list.filter(function(i) { return isDirectChild(parentId, i.id); });
+            list.forEach(function(item) { select.options.add(new Option(item.value, item.id)); });
+        }
+
+        function handleWilayahChange(prefix, type) {
+            var select = document.getElementById(prefix + '_' + type + '_id');
+            var id = select.value;
+            var textVal = select.options[select.selectedIndex] ? select.options[select.selectedIndex].text : '';
+            document.getElementById(prefix + '_' + type).value = textVal;
+
+            if(type === 'prov') {
+                populateWilayahDropdown(prefix, 'kabkota', id);
+                document.getElementById(prefix + '_kec_id').innerHTML = '<option value="">Pilih Kab Dulu</option>';
+                document.getElementById(prefix + '_desakel_id').innerHTML = '<option value="">Pilih Kec Dulu</option>';
+            }
+            else if(type === 'kabkota') {
+                populateWilayahDropdown(prefix, 'kec', id);
+                document.getElementById(prefix + '_desakel_id').innerHTML = '<option value="">Pilih Kec Dulu</option>';
+            }
+            else if(type === 'kec') {
+                populateWilayahDropdown(prefix, 'desakel', id);
+            }
+            
+            if(document.getElementById('copy-alamat').checked && prefix === 'domisili') syncAlamat();
+            
+            if (select.classList.contains('input-error') && select.value) removeError(select);
+        }
+
+        function autoSetCascading(prefix, data) {
+            var pId = data[prefix + '_prov_id']; var kId = data[prefix + '_kabkota_id'];
+            var cId = data[prefix + '_kec_id']; var dId = data[prefix + '_desakel_id'];
+            if(pId) {
+                document.getElementById(prefix + '_prov_id').value = pId; handleWilayahChange(prefix, 'prov');
+                if(kId) {
+                    document.getElementById(prefix + '_kabkota_id').value = kId; handleWilayahChange(prefix, 'kabkota');
+                    if(cId) {
+                        document.getElementById(prefix + '_kec_id').value = cId; handleWilayahChange(prefix, 'kec');
+                        if(dId) { document.getElementById(prefix + '_desakel_id').value = dId; handleWilayahChange(prefix, 'desakel'); }
+                    }
+                }
+            }
+        }
+
+        function syncAlamat() {
+            ['prov', 'kabkota', 'kec', 'desakel'].forEach(function(type) {
+                var elAsalId = document.getElementById('asal_' + type + '_id');
+                elAsalId.innerHTML = document.getElementById('domisili_' + type + '_id').innerHTML;
+                elAsalId.value = document.getElementById('domisili_' + type + '_id').value;
+                document.getElementById('asal_' + type).value = document.getElementById('domisili_' + type).value;
+                
+                if (elAsalId.classList.contains('input-error') && elAsalId.value) removeError(elAsalId);
+            });
+        }
+        function setupCopyAlamat() { document.getElementById('copy-alamat').addEventListener('change', function(){ if(this.checked) syncAlamat(); }); }
+
+        function initTahunDropdown() {
+            var select = document.getElementById('tahun_diutus');
+            for(var y = new Date().getFullYear(); y >= 1980; y--) select.options.add(new Option(y, y));
+        }
+
+        function setupTabs() {
+            var btns = document.querySelectorAll('.tab-btn');
+            btns.forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    btns.forEach(function(b) { 
+                        b.classList.remove('bg-teal-600', 'text-white', 'shadow-sm'); 
+                        b.classList.add('bg-gray-100', 'text-gray-700'); 
+                    });
+                    document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+                    
+                    btn.classList.add('bg-teal-600', 'text-white', 'shadow-sm'); 
+                    btn.classList.remove('bg-gray-100', 'text-gray-700');
+                    document.getElementById(btn.dataset.target).classList.add('active');
+                });
+            });
+        }
+
+        function setupAutoCaps() {
+            document.querySelectorAll('.auto-caps').forEach(function(el) {
+                el.addEventListener('input', function() { this.value = this.value.toUpperCase(); });
+                el.addEventListener('blur', function() { this.value = this.value.trim(); });
+            });
+        }
+
+        function setupValidationListeners() {
+            document.addEventListener('input', function(e) {
+                if(e.target.classList && e.target.classList.contains('wa-validate')) {
+                    var val = e.target.value.replace(/\D/g, ''); 
+                    if(val.startsWith('08')) val = '628' + val.substring(2); 
+                    e.target.value = val;
+                }
+                
+                if(e.target.classList && e.target.classList.contains('input-error')) {
+                    if (e.target.classList.contains('nik-validate')) {
+                        if (e.target.value.length === 16) removeError(e.target);
+                    } else if (e.target.checkValidity()) {
+                        removeError(e.target);
+                    }
+                }
+            });
+            
+            document.addEventListener('change', function(e) {
+                if(e.target.classList && e.target.classList.contains('input-error') && e.target.checkValidity()) {
+                    removeError(e.target);
+                }
+            });
+        }
+
+        function setupDynamicName() {
+            var updateName = function() {
+                var depan = document.getElementById('gelar_depan').value.trim();
+                var nama = document.getElementById('nama_lengkap_tanpa_gelar').value.trim();
+                var belakang = document.getElementById('gelar_belakang').value.trim();
+                var full = '';
+                if(depan) full += depan + ' '; full += nama; if(belakang) full += ', ' + belakang;
+                document.getElementById('nama_lengkap_beserta_gelar').value = full;
+            };
+            ['gelar_depan', 'nama_lengkap_tanpa_gelar', 'gelar_belakang'].forEach(function(id) {
+                document.getElementById(id).addEventListener('input', updateName);
+            });
+        }
+
+        function toggleBankLainnya() {
+            var val = document.getElementById('nama_bank').value;
+            var inputLainnya = document.getElementById('nama_bank_lainnya');
+            if(val === 'LAINNYA (input manual)') { 
+                inputLainnya.classList.remove('hidden'); 
+                inputLainnya.setAttribute('required', 'true'); 
+            } else { 
+                inputLainnya.classList.add('hidden'); 
+                inputLainnya.removeAttribute('required'); 
+                removeError(inputLainnya);
+            }
+        }
+
+        document.getElementById('status_pernikahan').addEventListener('change', function() {
+            var val = this.value;
+            var container = document.getElementById('istri-container');
+            var btn = document.getElementById('btn-tambah-istri');
+            container.innerHTML = ''; istriCount = 0;
+            
+            if(val === 'MENIKAH') {
+                container.classList.remove('hidden'); btn.classList.remove('hidden');
+                addIstriForm(false); 
+            } else {
+                container.classList.add('hidden'); btn.classList.add('hidden'); 
+                document.getElementById('jumlah_istri').value = 0;
+                calcTotalAnak();
+            }
+        });
+
+        document.getElementById('btn-tambah-istri').addEventListener('click', function() {
+            if(istriCount < 4) addIstriForm(true); else Swal.fire('Maksimal', 'Batas sistem maksimal 4 data istri.', 'info');
+        });
+
+        function addIstriForm(canDelete) {
+            istriCount++; var id = istriCount;
+            var deleteBtn = canDelete ? '<button type="button" onclick="hapusIstri(' + id + ')" class="absolute top-3 right-3 text-red-500 hover:text-white bg-red-100 hover:bg-red-500 rounded-full w-8 h-8 flex items-center justify-center transition"><i class="fas fa-trash-alt text-sm"></i></button>' : '';
+            var html = '<div class="p-4 border border-teal-100 rounded-lg bg-teal-50/30 shadow-sm relative istri-block" id="istri-block-' + id + '">' +
+                    deleteBtn +
+                    '<h5 class="font-bold text-teal-800 mb-3 border-b border-teal-200 pb-2"><i class="fas fa-female mr-1"></i> Data Istri Ke-' + id + '</h5>' +
+                    '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">' +
+                        '<div class="md:col-span-2 lg:col-span-1"><label class="text-xs font-semibold text-gray-600 uppercase">Nama Lengkap *</label><input type="text" name="istri_' + id + '_nama" required class="w-full p-2 border rounded mt-1 auto-caps bg-white"></div>' +
+                        '<div><label class="text-xs font-semibold text-gray-600 uppercase">No. WhatsApp *</label><input type="tel" name="istri_' + id + '_wa" required class="w-full p-2 border rounded mt-1 wa-validate bg-white"></div>' +
+                        '<div><label class="text-xs font-semibold text-gray-600 uppercase">NIK (16 Digit) *</label><input type="number" name="istri_' + id + '_nik" required class="w-full p-2 border rounded mt-1 nik-validate bg-white"></div>' +
+                        '<div><label class="text-xs font-semibold text-gray-600 uppercase">Tanggal Lahir *</label><input type="date" name="istri_' + id + '_tgl_lahir" required class="w-full p-2 border rounded mt-1 bg-white"></div>' +
+                        '<div><label class="text-xs font-semibold text-gray-600 uppercase">Jumlah Anak *</label><input type="number" name="istri_' + id + '_anak" required value="0" min="0" onchange="calcTotalAnak()" class="w-full p-2 border rounded mt-1 anak-input bg-white font-bold text-center"></div>' +
+                    '</div>' +
+                '</div>';
+            document.getElementById('istri-container').insertAdjacentHTML('beforeend', html);
+            document.getElementById('jumlah_istri').value = istriCount;
+            setupAutoCaps();
+        }
+
+        function hapusIstri(id) { 
+            document.getElementById('istri-block-' + id).remove(); 
+            istriCount--; 
+            document.getElementById('jumlah_istri').value = document.querySelectorAll('.istri-block').length; 
+            calcTotalAnak(); 
+        }
+        
+        function calcTotalAnak() { 
+            var t = 0; 
+            document.querySelectorAll('.anak-input').forEach(function(i) { t += parseInt(i.value || 0); }); 
+            document.getElementById('jumlah_anak').value = t; 
+        }
+
+        function triggerFile(id) { document.getElementById(id).click(); }
+        
+        function handleFileSelect(event, type) {
+            var file = event.target.files[0];
+            if(!file) return;
+            if(file.size > 1024 * 1024 * 2) { Swal.fire('Ukuran Besar', 'Maksimal ukuran foto adalah 2MB.', 'error'); event.target.value = ''; return; }
+            
+            document.getElementById('file_name_' + type).value = file.name;
+
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                currentCropTarget = type;
+                document.getElementById('cropper-image').src = e.target.result;
+                document.getElementById('cropper-title').innerHTML = type === 'ktp' ? '<i class="fas fa-id-card text-teal-600 mr-2"></i>Sesuaikan KTP' : '<i class="fas fa-user text-teal-600 mr-2"></i>Sesuaikan Wajah Formal';
+                document.getElementById('cropper-modal').style.display = 'flex';
+                if(cropper) cropper.destroy();
+                
+                cropper = new Cropper(document.getElementById('cropper-image'), { 
+                    aspectRatio: type === 'ktp' ? 8/5 : 3/4, 
+                    viewMode: 1, 
+                    autoCropArea: 1 
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function closeCropper() { 
+            document.getElementById('cropper-modal').style.display = 'none'; 
+            if(cropper) { cropper.destroy(); cropper = null; } 
+            document.getElementById('file_' + currentCropTarget).value = ''; 
+        }
+        
+        function applyCrop() {
+            if(!cropper) return;
+            var canvas = cropper.getCroppedCanvas({ width: currentCropTarget === 'ktp' ? 800 : 600 });
+            var base64 = canvas.toDataURL('image/jpeg', 0.8);
+            
+            var previewImg = document.getElementById('preview_' + currentCropTarget);
+            previewImg.src = base64; 
+            document.getElementById('base64_' + currentCropTarget).value = base64;
+            removeError(previewImg);
+            
+            closeCropper();
+        }
+
+        function validateAndSubmit() {
+            var form = document.getElementById('profil-form');
+            
+            document.querySelectorAll('.input-error').forEach(function(el) { removeError(el); });
+
+            var isValid = true;
+            var firstInvalid = null;
+
+            var elements = form.elements;
+            for (var i = 0; i < elements.length; i++) {
+                if (elements[i].willValidate && !elements[i].validity.valid) {
+                    addError(elements[i]);
+                    isValid = false;
+                    if (!firstInvalid) firstInvalid = elements[i];
+                }
+            }
+
+            var nik = document.getElementById('nik');
+            if (nik.value.length !== 16) { 
+                addError(nik); isValid = false; if (!firstInvalid) firstInvalid = nik;
+            }
+            
+            document.querySelectorAll('input[name^="istri_"][name$="_nik"]').forEach(function(el) { 
+                if(el.value && el.value.length !== 16) { 
+                    addError(el); isValid = false; if (!firstInvalid) firstInvalid = el;
+                }
+            });
+
+            var rek = document.getElementById('nomor_rekening');
+            if (rek.value.length < 5) { 
+                addError(rek); isValid = false; if (!firstInvalid) firstInvalid = rek;
+            }
+
+            var urlKtp = document.getElementById('foto_ktp_url').value;
+            var b64Ktp = document.getElementById('base64_ktp').value;
+            if (!urlKtp && !b64Ktp) { 
+                addError(document.getElementById('preview_ktp')); isValid = false; 
+                if (!firstInvalid) firstInvalid = document.getElementById('preview_ktp');
+            }
+
+            var urlWajah = document.getElementById('foto_wajah_url').value;
+            var b64Wajah = document.getElementById('base64_wajah').value;
+            if (!urlWajah && !b64Wajah) { 
+                addError(document.getElementById('preview_wajah')); isValid = false; 
+                if (!firstInvalid) firstInvalid = document.getElementById('preview_wajah');
+            }
+
+            if (!isValid) {
+                if (firstInvalid) {
+                    var tabContent = firstInvalid.closest('.tab-content');
+                    if (tabContent && !tabContent.classList.contains('active')) {
+                        var targetId = tabContent.id;
+                        var tabBtn = document.querySelector('.tab-btn[data-target="' + targetId + '"]');
+                        if(tabBtn) tabBtn.click();
+                    }
+                    setTimeout(function() {
+                        firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        firstInvalid.focus();
+                    }, 100);
+                }
+                Swal.fire('Data Belum Lengkap', 'Harap isi/perbaiki kolom yang bergaris merah. (Pastikan foto dan format angka tepat)', 'warning');
+                return;
+            }
+
+            var formData = new FormData(form);
+            var dataObj = {};
+            formData.forEach(function(value, key) { dataObj[key] = value; });
+
+            Swal.fire({
+                title: 'Kirim Pembaruan Profil?', 
+                text: "Pastikan data sudah diperiksa kebenarannya secara detail.", 
+                icon: 'question',
+                showCancelButton: true, confirmButtonColor: '#0f766e', confirmButtonText: 'Ya, Simpan Permanen'
+            }).then(function(result) { if (result.isConfirmed) executeSubmit(dataObj); });
+        }
+
+        function executeSubmit(data) {
+            showLoading('Menyimpan data dan foto...\nProses ini membutuhkan waktu.');
+            if (isSimulation) {
+                setTimeout(function() { hideLoading(); Swal.fire('Berhasil!', 'Profil diperbarui dalam mode Simulasi.', 'success'); }, 2000);
+            } else {
+                try {
+                    google.script.run
+                        .withSuccessHandler(function(res) {
+                            hideLoading();
+                            if(res && res.success) {
+                                Swal.fire('Alhamdulillah!', res.message, 'success').then(function() {
+                                    document.getElementById('base64_ktp').value = ''; document.getElementById('base64_wajah').value = '';
+                                    document.getElementById('file_name_ktp').value = ''; document.getElementById('file_name_wajah').value = '';
+                                    document.getElementById('foto_ktp_url').value = res.newKtp || 'uploaded';
+                                    document.getElementById('foto_wajah_url').value = res.newWajah || 'uploaded';
+                                });
+                            } else {
+                                Swal.fire('Gagal Menyimpan', res ? res.message : "Sistem gagal memproses penyimpanan. Silakan coba lagi.", 'error');
+                            }
+                        })
+                        .withFailureHandler(function(err) { 
+                            hideLoading(); 
+                            Swal.fire('Kesalahan Sistem', "Terjadi kesalahan sistem saat menyimpan.", 'error'); 
+                        })
+                        .saveProfile(data);
+                } catch(e) {
+                    hideLoading(); Swal.fire('Kesalahan Sistem', "Sistem browser menolak permintaan.", 'error');
+                }
+            }
+        }
+        
+        function logout() { 
+            currentUser = null;
+            document.getElementById('profil-form').reset();
+            
+            document.getElementById('dashboard-page').style.display = 'none';
+            document.getElementById('login-page').style.display = 'flex';
+            
+            document.getElementById('login-password').value = '';
+            document.getElementById('preview_ktp').src = 'https://placehold.co/400x250/e2e8f0/64748b?text=Preview+KTP';
+            document.getElementById('preview_wajah').src = 'https://placehold.co/300x400/e2e8f0/64748b?text=Foto+Wajah+Formal';
+            document.getElementById('last-update-card').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
